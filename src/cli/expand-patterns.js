@@ -1,6 +1,9 @@
 import path from "node:path";
+import fs from "node:fs";
 import { lstatSafe, normalizeToPosix } from "./utils.js";
 import { fastGlob } from "./prettier-internal.js";
+
+const REGEX_SPLITALL_CRLF = /\r?\n/;
 
 /** @typedef {import('./context').Context} Context */
 
@@ -53,6 +56,17 @@ async function* expandPatternsInternal(context) {
     ignore: silentlyIgnoredDirs.map((dir) => "**/" + dir),
     followSymbolicLinks: false,
   };
+
+  if (context.argv.ignorePath.length > 0) {
+    for (const ignoreFile of context.argv.ignorePath) {
+      if (fs.existsSync(ignoreFile)) {
+        const content = fs.readFileSync(ignoreFile, "utf8");
+        if (content) {
+          globOptions.ignore.push(...content.split(REGEX_SPLITALL_CRLF));
+        }
+      }
+    }
+  }
 
   const cwd = process.cwd();
 
